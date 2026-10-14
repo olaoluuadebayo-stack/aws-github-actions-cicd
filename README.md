@@ -4,12 +4,13 @@ An automated static website deployment pipeline using GitHub Actions, OpenID Con
 
 ## Project Objective
 
-This project demonstrates how to validate website files and deploy changes to AWS automatically when code is pushed to the `main` branch of a GitHub repository.
+This project demonstrates how to validate website files and automatically deploy website changes to AWS when code is pushed to the `main` branch of a GitHub repository.
 
-It also demonstrates how GitHub Actions can authenticate to AWS using temporary credentials rather than long-lived access keys stored in GitHub.
+It also demonstrates how GitHub Actions can authenticate to AWS using temporary credentials instead of long-lived AWS access keys stored in GitHub.
 
 ## Architecture
 
+```text
 Developer
     |
     v
@@ -28,6 +29,7 @@ AWS IAM Deployment Role
     |
     v
 Amazon S3 Static Website
+```
 
 ## Technologies
 
@@ -41,6 +43,7 @@ Amazon S3 Static Website
 
 ## Repository Structure
 
+```text
 aws-github-actions-cicd/
 ├── .github/
 │   └── workflows/
@@ -51,45 +54,72 @@ aws-github-actions-cicd/
 ├── scripts/
 │   ├── verify.sh
 │   └── destroy.sh
+├── iam/
+│   ├── trust-policy.json
+│   ├── s3-deploy-policy.json
+│   └── website-read-policy.json
 ├── README.md
 ├── PROJECT_PLAN.md
 └── .gitignore
+```
 
 ## Security Design
 
-- GitHub Actions authenticates through AWS OIDC federation.
-- AWS access keys are not stored as long-lived GitHub secrets.
-- The deployment role is restricted to the intended repository and branch.
-- AWS permissions are scoped to the deployment bucket and required operations.
-- Only public website assets are deployed to the static website.
+- GitHub Actions authenticates to AWS through OIDC federation.
+- Long-lived AWS access keys are not stored in GitHub repository secrets for deployment.
+- The IAM trust policy restricts role assumption to the intended GitHub repository and the `main` branch using GitHub's immutable OIDC subject claim.
+- The deployment role has narrowly scoped S3 permissions for listing the deployment bucket and uploading or deleting its objects.
+- Public read access is restricted to website objects in the dedicated bucket.
+- The workflow grants `id-token: write` only to the deployment job that needs to request an OIDC token.
+- The bucket must contain public website assets only. Secrets and private data must never be uploaded.
 
 ## Validation and Testing
 
-The local verification script checks that the HTML and CSS files exist and that the HTML contains basic structural elements.
+The local verification script checks that the HTML and CSS files exist, verifies basic HTML structure, and confirms the stylesheet reference.
 
-The pipeline will also be tested for successful deployment, HTTP response, expected page content, and failure handling.
+The following tests were completed:
+
+- [x] Local website validation passed.
+- [x] Validation correctly failed when the stylesheet was temporarily removed.
+- [x] Validation passed after the stylesheet was restored.
+- [x] GitHub Actions successfully executed the validation job.
+- [x] GitHub Actions authenticated to AWS through OIDC.
+- [x] The deployment job uploaded website files to S3 successfully.
+- [x] The hosted website returned HTTP 200.
+- [x] The expected website content was verified through an HTTP request.
+- [x] A subsequent website change was committed and pushed to `main`.
+- [x] GitHub Actions automatically redeployed the change.
+- [x] The updated content was verified on the live S3 website.
+- [x] GitHub Actions action versions were updated to remove the Node.js 20 deprecation warnings.
 
 ## Cost Management
 
-The project avoids EC2 instances and uses a small static website.
+This project avoids EC2 instances and uses Amazon S3 for static website hosting.
 
-Amazon S3 storage, requests, and data transfer may incur charges. After testing, the bucket will be emptied and deleted, and project-specific IAM resources will be removed when no longer required.
+S3 storage, requests, and data transfer may incur charges. The project is intended to be short-lived for learning and portfolio demonstration.
 
-Cleanup will be verified independently.
+After testing, the S3 bucket and its objects will be deleted, along with the project-specific IAM deployment role and inline policies. The shared GitHub OIDC identity provider will be retained because other projects may depend on it.
+
+Cleanup must be verified independently through AWS CLI checks.
 
 ## Limitations
 
-Direct S3 static website hosting does not provide HTTPS by itself. A production design would normally consider CloudFront with Origin Access Control and HTTPS.
+- Direct S3 static website hosting uses an HTTP website endpoint and does not provide HTTPS by itself.
+- The website is publicly readable while hosting is enabled.
+- The workflow depends on the target bucket and IAM role existing. After AWS resources are removed, the deployment infrastructure must be recreated before deployment can run again.
+- A production architecture would normally use CloudFront with Origin Access Control and HTTPS, with the S3 bucket kept private.
 
-This project is intended to demonstrate CI/CD and secure workload authentication, not to serve as a complete production hosting platform.
+This project demonstrates CI/CD automation and federated AWS authentication. It is not intended to be a complete production hosting platform.
 
 ## Project Status
 
 - [x] Project plan documented
 - [x] Static website created
 - [x] Local verification script implemented and tested
-- [ ] GitHub repository published
-- [ ] GitHub Actions workflow configured
-- [ ] AWS OIDC and IAM permissions configured
-- [ ] S3 deployment tested
-- [ ] Cleanup completed and verified
+- [x] GitHub repository published
+- [x] GitHub Actions workflow configured
+- [x] AWS OIDC federation and IAM permissions configured
+- [x] S3 static website hosting configured
+- [x] Initial automated deployment tested
+- [x] Automated redeployment tested
+- [ ] AWS cleanup completed and independently verified
