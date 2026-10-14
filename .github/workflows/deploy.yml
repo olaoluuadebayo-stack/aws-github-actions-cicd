@@ -25,3 +25,26 @@ jobs:
 
       - name: Check expected page content
         run: grep -q "Deployment successful." website/index.html
+
+  deploy:
+    name: Deploy website to S3
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: arn:aws:iam::256748319015:role/GitHubActionsS3DeployRole
+          aws-region: us-east-1
+
+      - name: Deploy website to S3
+        run: aws s3 sync website/ s3://olaoluuadebayo-github-actions-cicd-256748319015/ --delete
