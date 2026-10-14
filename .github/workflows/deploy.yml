@@ -1,0 +1,27 @@
+name: Validate and Deploy Website
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate website files
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify website structure
+        run: ./scripts/verify.sh
+
+      - name: Check expected page content
+        run: grep -q "Deployment successful." website/index.html

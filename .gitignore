@@ -1,0 +1,16 @@
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+state.env
+*.log
+
+# AWS credentials and configuration
+.aws/
+credentials
+config
+
+# Operating system and editor files
+.DS_Store
+Thumbs.db
+.vscode/
